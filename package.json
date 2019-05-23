@@ -9,11 +9,11 @@
     "browserslist": "defaults",
     "scripts": {
         "dev": "NODE_ENV=development parcel ./src/index.html",
-        "build": "NODE_ENV=production yarn clean && parcel build ./src/index.html",
+        "build": "NODE_ENV=production yarn clean && parcel build --out-dir docs ./src/index.html",
         "check-format": "prettier --check 'src/**/*.ts'",
         "format": "prettier --write 'src/**/*.ts'",
-        "clean": "rm -rf ./dist",
-        "size": "du -sh dist/* && du -sh dist/"
+        "clean": "rm -rf ./docs",
+        "size": "du -sh docs/* && du -sh docs/"
     },
     "devDependencies": {
         "parcel-bundler": "^1.12.3",

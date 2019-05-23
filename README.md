@@ -16,6 +16,8 @@ Yarn is the only dependency that must be preinstalled.
 
 ### Commands
 
+We use the `docs` folder as the destination of the production bundle inorder to easily host it using github pages.
+
 Install dependencies
 
     > yarn install
