@@ -7,6 +7,7 @@ import vanguard from "~/assets/Vanguard_32.png";
 import backgrounds from "~/assets/backgrounds.png";
 import items from "~/assets/items.png";
 import sword from "~/assets/sword.png";
+import watchkeeper from "~/assets/watchkeeper.png";
+import waywalker from "~/assets/waywalker.png";
 
-
-export default { bomb, dude, platform, sky, star, vanguard, backgrounds, items, sword };
+export default { waywalker, watchkeeper, bomb, dude, platform, sky, star, vanguard, backgrounds, items, sword };
