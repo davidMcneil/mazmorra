@@ -3,7 +3,7 @@ import assets from "~/assets/assets";
 import { Scene, Scale } from "phaser";
 import { Socket } from "dgram";
 
-let socket = require("socket.io-client")("http://localhost:3000");
+let socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com");
 socket.on("connect", () => {
     console.log("connected");
 });
@@ -141,7 +141,7 @@ var timer = 0;
 
 function update() {
     let scene = this as Scene;
-    if (scene.time.now - timer > 500) {
+    if (scene.time.now - timer > 5) {
         timer = scene.time.now;
         socket.emit("stateUpdate", {
             name: playerId,
