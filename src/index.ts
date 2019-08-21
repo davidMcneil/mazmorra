@@ -41,16 +41,26 @@ var config: Phaser.Types.Core.GameConfig = {
         preload: preload,
         create: create,
         update: update
-    }
+    },
+    backgroundColor: "#d3d3d3"
 };
 
-let possibleCharacters = [assets.vanguard];
+let possiblePlayerCharacters = [assets.watchkeeper];
+let possibleEnemyCharacters = [assets.waywalker];
 
 function preload() {
     let scene = this as Scene;
     scene.load.spritesheet(
-        "player1",
-        possibleCharacters[Math.floor(Math.random() * possibleCharacters.length)],
+        "player",
+        possiblePlayerCharacters[Math.floor(Math.random() * possiblePlayerCharacters.length)],
+        {
+            frameWidth: 32,
+            frameHeight: 32
+        }
+    );
+    scene.load.spritesheet(
+        "enemy",
+        possibleEnemyCharacters[Math.floor(Math.random() * possiblePlayerCharacters.length)],
         {
             frameWidth: 32,
             frameHeight: 32
@@ -72,15 +82,36 @@ function create() {
             otherPlayersNames.push(payload.name);
             otherPlayersSprites.push({
                 id: payload.name,
-                sprite: scene.physics.add.sprite(payload.x, payload.y, "player1")
+                sprite: scene.physics.add.sprite(payload.x, payload.y, "enemy").setScale(2)
             });
         } else {
-            let wantedSprite = otherPlayersSprites.find(sprite => {
+            let wantedSprite: Phaser.GameObjects.Sprite = otherPlayersSprites.find(sprite => {
                 return payload.name == sprite.id;
             }).sprite;
             wantedSprite.x = payload.x;
             wantedSprite.y = payload.y;
-            console.log(wantedSprite);
+            switch (payload.direction) {
+                case "right":
+                    if (wantedSprite.frame.name != "6") {
+                        wantedSprite.setFrame("6");
+                    }
+                    break;
+                case "left":
+                    if (wantedSprite.frame.name != "3") {
+                        wantedSprite.setFrame("3");
+                    }
+                    break;
+                case "up":
+                    if (wantedSprite.frame.name != "9") {
+                        wantedSprite.setFrame("9");
+                    }
+                    break;
+                case "down":
+                    if (wantedSprite.frame.name != "0") {
+                        wantedSprite.setFrame("0");
+                    }
+                    break;
+            }
             console.log(payload.direction);
         }
     });
@@ -93,7 +124,7 @@ function create() {
     enter = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
 
     playerId = Math.random();
-    player = scene.physics.add.sprite(getRandomX(), getRandomY(), "player1");
+    player = scene.physics.add.sprite(getRandomX(), getRandomY(), "player");
     player.setSize(20, 20);
     player.scaleX = 2;
     player.scaleY = player.scaleX;
@@ -102,23 +133,23 @@ function create() {
 
     scene.anims.create({
         key: "right1",
-        frames: scene.anims.generateFrameNumbers("player1", {
-            frames: [3, 4, 3, 5]
-        }),
-        frameRate: 10,
-        repeat: -1
-    });
-    scene.anims.create({
-        key: "left1",
-        frames: scene.anims.generateFrameNumbers("player1", {
+        frames: scene.anims.generateFrameNumbers("player", {
             frames: [6, 7, 6, 8]
         }),
         frameRate: 10,
         repeat: -1
     });
     scene.anims.create({
+        key: "left1",
+        frames: scene.anims.generateFrameNumbers("player", {
+            frames: [3, 4, 3, 5]
+        }),
+        frameRate: 10,
+        repeat: -1
+    });
+    scene.anims.create({
         key: "up1",
-        frames: scene.anims.generateFrameNumbers("player1", {
+        frames: scene.anims.generateFrameNumbers("player", {
             frames: [9, 10, 9, 11]
         }),
         frameRate: 10,
@@ -126,7 +157,7 @@ function create() {
     });
     scene.anims.create({
         key: "down1",
-        frames: scene.anims.generateFrameNumbers("player1", {
+        frames: scene.anims.generateFrameNumbers("player", {
             frames: [0, 1, 0, 2]
         }),
         frameRate: 10,
@@ -134,52 +165,52 @@ function create() {
     });
 }
 
-let directionsPlayer1 = [];
+let directionsplayer = [];
 let directionsPlayer2 = [];
 
 var timer = 0;
 
 function update() {
     let scene = this as Scene;
-    if (scene.time.now - timer > 5) {
+    if (scene.time.now - timer > 10) {
         timer = scene.time.now;
         socket.emit("stateUpdate", {
             name: playerId,
             x: player.x,
             y: player.y,
-            direction: player.currentAnim
+            direction: directionsplayer[directionsplayer.length - 1]
         });
     }
 
     if (Phaser.Input.Keyboard.JustDown(w)) {
-        directionsPlayer1.push("up");
+        directionsplayer.push("up");
     }
     if (Phaser.Input.Keyboard.JustDown(s)) {
-        directionsPlayer1.push("down");
+        directionsplayer.push("down");
     }
     if (Phaser.Input.Keyboard.JustDown(a)) {
-        directionsPlayer1.push("left");
+        directionsplayer.push("left");
     }
     if (Phaser.Input.Keyboard.JustDown(d)) {
-        directionsPlayer1.push("right");
+        directionsplayer.push("right");
     }
     if (Phaser.Input.Keyboard.JustUp(w)) {
-        directionsPlayer1 = directionsPlayer1.filter(d => d !== "up");
+        directionsplayer = directionsplayer.filter(d => d !== "up");
     }
     if (Phaser.Input.Keyboard.JustUp(s)) {
-        directionsPlayer1 = directionsPlayer1.filter(d => d !== "down");
+        directionsplayer = directionsplayer.filter(d => d !== "down");
     }
     if (Phaser.Input.Keyboard.JustUp(a)) {
-        directionsPlayer1 = directionsPlayer1.filter(d => d !== "left");
+        directionsplayer = directionsplayer.filter(d => d !== "left");
     }
     if (Phaser.Input.Keyboard.JustUp(d)) {
-        directionsPlayer1 = directionsPlayer1.filter(d => d !== "right");
+        directionsplayer = directionsplayer.filter(d => d !== "right");
     }
     player.setVelocity(0);
-    if (directionsPlayer1.length === 0) {
+    if (directionsplayer.length === 0) {
         player.anims.stop();
     } else {
-        switch (directionsPlayer1[directionsPlayer1.length - 1]) {
+        switch (directionsplayer[directionsplayer.length - 1]) {
             case "up":
                 player.setVelocityY(-300);
                 player.anims.play("up1", true);
