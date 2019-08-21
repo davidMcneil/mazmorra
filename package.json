@@ -1,0 +1,30 @@
+{
+    "name": "mazmorra",
+    "version": "0.1.0",
+    "description": "An awesome dungeon game",
+    "repository": "https://github.com/davidMcneil/mazmorra",
+    "author": "mcneil",
+    "license": "MIT",
+    "browser": true,
+    "browserslist": "defaults",
+    "scripts": {
+        "start": "NODE_ENV=development parcel --out-dir=.dev ./src/index.html",
+        "start:server": "nodemon server/index.ts",
+        "build": "NODE_ENV=production yarn clean && parcel build --out-dir=docs --public-url=./ ./src/index.html",
+        "check-format": "prettier --check 'src/**/*.ts'",
+        "format": "prettier --write 'src/**/*.ts'",
+        "clean": "rm -rf ./docs",
+        "size": "du -sh docs/* && du -sh docs/"
+    },
+    "devDependencies": {
+        "parcel-bundler": "^1.12.3",
+        "prettier": "^1.17.1",
+        "typescript": "^3.4.5"
+    },
+    "dependencies": {
+        "assets": "^3.0.1",
+        "express": "^4.17.1",
+        "phaser": "^3.17.0",
+        "socket.io": "^2.2.0"
+    }
+}
