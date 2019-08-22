@@ -1,20 +1,73 @@
 import "phaser";
 import assets from "~/assets/assets";
-import { Scene, Scale } from "phaser";
-import { Socket } from "dgram";
+import { Scene } from "phaser";
+import { Socket, Client } from "socket.io";
 
-let socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com");
+let address;
+// function httpGetAsync(theUrl, callback) {
+//     var xmlHttp = new XMLHttpRequest();
+//     xmlHttp.onreadystatechange = function() {
+//         if (xmlHttp.readyState == 4 && xmlHttp.status == 200) callback(xmlHttp.responseText);
+//     };
+//     xmlHttp.open("GET", theUrl, true); // true for asynchronous
+//     xmlHttp.send(null);
+// }
+// httpGetAsync("http://ip.jsontest.com/", x => {
+//     console.log(x);
+// });
+// (function() {
+//     var xhr = new XMLHttpRequest();
+//     xhr.withCredentials = true;
+//     xhr.open("GET", "http://ip.jsontest.com/", true);
+//     xhr.onreadystatechange = function() {
+//         if (xhr.readyState == 4 && xhr.status == 200) {
+//             address = JSON.parse(xhr.responseText);
+//         }
+//     };
+//     xhr.onerror = e => {
+//         console.log("error: " + e);
+//     };
+//     xhr.send();
+// })();
+
+// let socket: Socket = require("socket.io-client")("http://localhost:3000");
+let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
 socket.on("connect", () => {
-    console.log("connected");
+    console.log("you connected to the server");
+    if (address) {
+        socket.emit("gotIp", address.ip);
+    }
 });
 
-let player;
-let playerId;
-let otherPlayersNames = [];
-let otherPlayersSprites = [];
+socket.on("assignId", payload => {
+    playerId = payload;
+    console.log("your id is " + playerId);
+    socket.emit("requestLatestState");
+});
 
-let displayWidth = 600;
-let displayHeight = 600;
+socket.on("userDisconnected", payload => {
+    let deletedSprite = otherPlayersSprites.find(sprite => {
+        return sprite.id === payload;
+    });
+    if (deletedSprite) {
+        deletedSprite.sprite.destroy();
+    }
+    otherPlayersSprites = otherPlayersSprites.filter(sprite => {
+        return sprite.id !== payload;
+    });
+});
+
+interface SpriteWithId {
+    id: string;
+    sprite: Phaser.Physics.Arcade.Sprite;
+}
+
+let player: Phaser.Physics.Arcade.Sprite;
+let playerId: string;
+let otherPlayersSprites: SpriteWithId[] = [];
+
+let displayWidth: number = 600;
+let displayHeight: number = 600;
 
 function getRandomX() {
     return Math.random() * displayWidth;
@@ -45,8 +98,8 @@ var config: Phaser.Types.Core.GameConfig = {
     backgroundColor: "#d3d3d3"
 };
 
-let possiblePlayerCharacters = [assets.watchkeeper];
-let possibleEnemyCharacters = [assets.waywalker];
+let possiblePlayerCharacters: any[] = [assets.watchkeeper];
+let possibleEnemyCharacters: any[] = [assets.waywalker];
 
 function preload() {
     let scene = this as Scene;
@@ -67,52 +120,38 @@ function preload() {
         }
     );
 }
-let a;
-let s;
-let w;
-let d;
-let enter;
+let a: Phaser.Input.Keyboard.Key;
+let s: Phaser.Input.Keyboard.Key;
+let w: Phaser.Input.Keyboard.Key;
+let d: Phaser.Input.Keyboard.Key;
 
 function create() {
     let scene = this as Scene;
 
     socket.on("newState", payload => {
-        if (!otherPlayersNames.includes(payload.name)) {
-            console.log("newUser");
-            otherPlayersNames.push(payload.name);
-            otherPlayersSprites.push({
-                id: payload.name,
-                sprite: scene.physics.add.sprite(payload.x, payload.y, "enemy").setScale(2)
+        let stateUpdate = payload as StateUpdate;
+        let wantedSpriteWithId: SpriteWithId = otherPlayersSprites.find(sprite => {
+            return stateUpdate.name == sprite.id;
+        });
+        if (!wantedSpriteWithId) {
+            console.log("user connected with id " + stateUpdate.name);
+            let newSprite: SpriteWithId = {
+                id: stateUpdate.name,
+                sprite: scene.physics.add.sprite(stateUpdate.x, stateUpdate.y, "enemy").setScale(2)
+            };
+            otherPlayersSprites.push(newSprite);
+            socket.emit("stateUpdate", {
+                name: playerId,
+                x: player.x,
+                y: player.y,
+                frame: player.frame.name
             });
         } else {
-            let wantedSprite: Phaser.GameObjects.Sprite = otherPlayersSprites.find(sprite => {
-                return payload.name == sprite.id;
-            }).sprite;
-            wantedSprite.x = payload.x;
-            wantedSprite.y = payload.y;
-            switch (payload.direction) {
-                case "right":
-                    if (wantedSprite.frame.name != "6") {
-                        wantedSprite.setFrame("6");
-                    }
-                    break;
-                case "left":
-                    if (wantedSprite.frame.name != "3") {
-                        wantedSprite.setFrame("3");
-                    }
-                    break;
-                case "up":
-                    if (wantedSprite.frame.name != "9") {
-                        wantedSprite.setFrame("9");
-                    }
-                    break;
-                case "down":
-                    if (wantedSprite.frame.name != "0") {
-                        wantedSprite.setFrame("0");
-                    }
-                    break;
+            wantedSpriteWithId.sprite.x = stateUpdate.x;
+            wantedSpriteWithId.sprite.y = stateUpdate.y;
+            if (wantedSpriteWithId.sprite.frame.name != stateUpdate.frame) {
+                wantedSpriteWithId.sprite.setFrame(stateUpdate.frame);
             }
-            console.log(payload.direction);
         }
     });
 
@@ -121,9 +160,6 @@ function create() {
     s = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     d = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    enter = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-
-    playerId = Math.random();
     player = scene.physics.add.sprite(getRandomX(), getRandomY(), "player");
     player.setSize(20, 20);
     player.scaleX = 2;
@@ -165,21 +201,40 @@ function create() {
     });
 }
 
-let directionsplayer = [];
-let directionsPlayer2 = [];
+let directionsplayer: string[] = [];
 
 var timer = 0;
 
+interface StateUpdate {
+    name: string;
+    x: number;
+    y: number;
+    frame: string;
+}
+
+let oldStateUpdate: StateUpdate = {
+    name: "",
+    x: 0,
+    y: 0,
+    frame: ""
+};
+
 function update() {
     let scene = this as Scene;
-    if (scene.time.now - timer > 10) {
-        timer = scene.time.now;
-        socket.emit("stateUpdate", {
-            name: playerId,
-            x: player.x,
-            y: player.y,
-            direction: directionsplayer[directionsplayer.length - 1]
-        });
+    if (playerId) {
+        if (scene.time.now - timer > 10) {
+            let stateUpdate: StateUpdate = {
+                name: playerId,
+                x: player.x,
+                y: player.y,
+                frame: player.frame.name
+            };
+            timer = scene.time.now;
+            if (!stateUpdatesAreEqual(stateUpdate, oldStateUpdate)) {
+                socket.emit("stateUpdate", stateUpdate);
+                oldStateUpdate = stateUpdate;
+            }
+        }
     }
 
     if (Phaser.Input.Keyboard.JustDown(w)) {
@@ -231,4 +286,8 @@ function update() {
     }
 }
 
-let game = new Phaser.Game(config);
+let game: Phaser.Game = new Phaser.Game(config);
+
+function stateUpdatesAreEqual(first: StateUpdate, second: StateUpdate) {
+    return first.x === second.x && first.y === second.y && first.frame === second.frame;
+}
