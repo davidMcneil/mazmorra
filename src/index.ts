@@ -1,42 +1,21 @@
 import "phaser";
-import assets from "~/assets/assets";
 import { Scene } from "phaser";
-import { Socket, Client } from "socket.io";
+import { Socket } from "socket.io";
 
-let address;
-// function httpGetAsync(theUrl, callback) {
-//     var xmlHttp = new XMLHttpRequest();
-//     xmlHttp.onreadystatechange = function() {
-//         if (xmlHttp.readyState == 4 && xmlHttp.status == 200) callback(xmlHttp.responseText);
-//     };
-//     xmlHttp.open("GET", theUrl, true); // true for asynchronous
-//     xmlHttp.send(null);
-// }
-// httpGetAsync("http://ip.jsontest.com/", x => {
-//     console.log(x);
-// });
-// (function() {
-//     var xhr = new XMLHttpRequest();
-//     xhr.withCredentials = true;
-//     xhr.open("GET", "http://ip.jsontest.com/", true);
-//     xhr.onreadystatechange = function() {
-//         if (xhr.readyState == 4 && xhr.status == 200) {
-//             address = JSON.parse(xhr.responseText);
-//         }
-//     };
-//     xhr.onerror = e => {
-//         console.log("error: " + e);
-//     };
-//     xhr.send();
-// })();
+import {
+    displayHeight,
+    displayWidth,
+    SpriteWithId,
+    StateUpdate,
+    possibleEnemyCharacters,
+    possiblePlayerCharacters
+} from "./consts";
+import { initializePlayer, stateUpdatesAreEqual } from "./functions";
 
-// let socket: Socket = require("socket.io-client")("http://localhost:3000");
-let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
+let socket: Socket = require("socket.io-client")("http://localhost:3000");
+// let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
 socket.on("connect", () => {
     console.log("you connected to the server");
-    if (address) {
-        socket.emit("gotIp", address.ip);
-    }
 });
 
 socket.on("assignId", payload => {
@@ -57,25 +36,9 @@ socket.on("userDisconnected", payload => {
     });
 });
 
-interface SpriteWithId {
-    id: string;
-    sprite: Phaser.Physics.Arcade.Sprite;
-}
-
 let player: Phaser.Physics.Arcade.Sprite;
 let playerId: string;
 let otherPlayersSprites: SpriteWithId[] = [];
-
-let displayWidth: number = 600;
-let displayHeight: number = 600;
-
-function getRandomX() {
-    return Math.random() * displayWidth;
-}
-
-function getRandomY() {
-    return Math.random() * displayHeight;
-}
 
 var config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
@@ -98,9 +61,6 @@ var config: Phaser.Types.Core.GameConfig = {
     backgroundColor: "#d3d3d3"
 };
 
-let possiblePlayerCharacters: any[] = [assets.watchkeeper];
-let possibleEnemyCharacters: any[] = [assets.waywalker];
-
 function preload() {
     let scene = this as Scene;
     scene.load.spritesheet(
@@ -120,6 +80,7 @@ function preload() {
         }
     );
 }
+
 let a: Phaser.Input.Keyboard.Key;
 let s: Phaser.Input.Keyboard.Key;
 let w: Phaser.Input.Keyboard.Key;
@@ -137,7 +98,7 @@ function create() {
             console.log("user connected with id " + stateUpdate.name);
             let newSprite: SpriteWithId = {
                 id: stateUpdate.name,
-                sprite: scene.physics.add.sprite(stateUpdate.x, stateUpdate.y, "enemy").setScale(2)
+                sprite: initializePlayer(scene, stateUpdate.x, stateUpdate.y, "enemy")
             };
             otherPlayersSprites.push(newSprite);
             socket.emit("stateUpdate", {
@@ -160,15 +121,15 @@ function create() {
     s = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     d = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    player = scene.physics.add.sprite(getRandomX(), getRandomY(), "player");
-    player.setSize(20, 20);
-    player.scaleX = 2;
-    player.scaleY = player.scaleX;
-    player.setCollideWorldBounds(true);
-    player.setBounce(0.5);
+    player = initializePlayer(
+        scene,
+        Math.random() * displayWidth,
+        Math.random() * displayHeight,
+        "player"
+    );
 
     scene.anims.create({
-        key: "right1",
+        key: "right",
         frames: scene.anims.generateFrameNumbers("player", {
             frames: [6, 7, 6, 8]
         }),
@@ -176,7 +137,7 @@ function create() {
         repeat: -1
     });
     scene.anims.create({
-        key: "left1",
+        key: "left",
         frames: scene.anims.generateFrameNumbers("player", {
             frames: [3, 4, 3, 5]
         }),
@@ -184,7 +145,7 @@ function create() {
         repeat: -1
     });
     scene.anims.create({
-        key: "up1",
+        key: "up",
         frames: scene.anims.generateFrameNumbers("player", {
             frames: [9, 10, 9, 11]
         }),
@@ -192,7 +153,7 @@ function create() {
         repeat: -1
     });
     scene.anims.create({
-        key: "down1",
+        key: "down",
         frames: scene.anims.generateFrameNumbers("player", {
             frames: [0, 1, 0, 2]
         }),
@@ -203,14 +164,7 @@ function create() {
 
 let directionsplayer: string[] = [];
 
-var timer = 0;
-
-interface StateUpdate {
-    name: string;
-    x: number;
-    y: number;
-    frame: string;
-}
+let timer = 0;
 
 let oldStateUpdate: StateUpdate = {
     name: "",
@@ -268,26 +222,22 @@ function update() {
         switch (directionsplayer[directionsplayer.length - 1]) {
             case "up":
                 player.setVelocityY(-300);
-                player.anims.play("up1", true);
+                player.anims.play("up", true);
                 break;
             case "down":
                 player.setVelocityY(300);
-                player.anims.play("down1", true);
+                player.anims.play("down", true);
                 break;
             case "left":
                 player.setVelocityX(-300);
-                player.anims.play("left1", true);
+                player.anims.play("left", true);
                 break;
             case "right":
                 player.setVelocityX(300);
-                player.anims.play("right1", true);
+                player.anims.play("right", true);
                 break;
         }
     }
 }
 
 let game: Phaser.Game = new Phaser.Game(config);
-
-function stateUpdatesAreEqual(first: StateUpdate, second: StateUpdate) {
-    return first.x === second.x && first.y === second.y && first.frame === second.frame;
-}
