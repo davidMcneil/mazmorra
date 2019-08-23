@@ -10,7 +10,7 @@ import {
     possibleEnemyCharacters,
     possiblePlayerCharacters
 } from "./consts";
-import { initializePlayer, stateUpdatesAreEqual } from "./functions";
+import { initializePlayer, stateUpdatesAreEqual, initializeEnemy } from "./functions";
 
 let socket: Socket = require("socket.io-client")("http://localhost:3000");
 // let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
@@ -98,7 +98,7 @@ function create() {
             console.log("user connected with id " + stateUpdate.name);
             let newSprite: SpriteWithId = {
                 id: stateUpdate.name,
-                sprite: initializePlayer(scene, stateUpdate.x, stateUpdate.y, "enemy")
+                sprite: initializeEnemy(scene, stateUpdate.x, stateUpdate.y)
             };
             otherPlayersSprites.push(newSprite);
             socket.emit("stateUpdate", {
@@ -107,7 +107,9 @@ function create() {
                 y: player.y,
                 frame: player.frame.name
             });
+            scene.physics.add.collider(player, newSprite.sprite);
         } else {
+            scene.physics.add.collider(player, wantedSpriteWithId.sprite);
             wantedSpriteWithId.sprite.x = stateUpdate.x;
             wantedSpriteWithId.sprite.y = stateUpdate.y;
             if (wantedSpriteWithId.sprite.frame.name != stateUpdate.frame) {
@@ -121,12 +123,7 @@ function create() {
     s = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     d = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
 
-    player = initializePlayer(
-        scene,
-        Math.random() * displayWidth,
-        Math.random() * displayHeight,
-        "player"
-    );
+    player = initializePlayer(scene, Math.random() * displayWidth, Math.random() * displayHeight);
 
     scene.anims.create({
         key: "right",
