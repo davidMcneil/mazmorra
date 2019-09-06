@@ -12,8 +12,8 @@ import {
 } from "./consts";
 import { initializePlayer, stateUpdatesAreEqual, initializeEnemy } from "./functions";
 
-let socket: Socket = require("socket.io-client")("http://localhost:3000");
-// let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
+// let socket: Socket = require("socket.io-client")("http://localhost:3000");
+let socket: Socket = require("socket.io-client")("https://mazmorra-server.herokuapp.com/");
 socket.on("connect", () => {
     console.log("you connected to the server");
 });
